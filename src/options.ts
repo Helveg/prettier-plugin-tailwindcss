@@ -55,6 +55,26 @@ export const options: Record<string, SupportOption> = {
     category: 'Tailwind CSS',
     description: 'Preserve duplicate classes inside a class list when sorting',
   },
+
+  tailwindApplyWrap: {
+    type: 'choice',
+    default: 'none',
+    choices: [
+      {
+        value: 'none',
+        description: 'Always place class lists on a single line',
+      },
+      {
+        value: 'fill',
+        description:
+          'Wrap the class list by inserting a new line any time adding another class from the list would exceed the print width.',
+      },
+      { value: 'each', description: 'Wrap each class to its own line' },
+    ],
+    category: 'Tailwind CSS',
+    description:
+      'Wrap class lists to new lines when they are longer than the print width',
+  },
 }
 
 export function getCustomizations(

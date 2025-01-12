@@ -16,7 +16,7 @@ import * as recast from 'recast'
 import { getTailwindConfig } from './config.js'
 import { getCustomizations } from './options.js'
 import { loadPlugins } from './plugins.js'
-import { sortClasses, sortClassList } from './sorting.js'
+import { bigSign, sortClasses, sortClassList } from './sorting.js'
 import type {
   Customizations,
   StringChange,
@@ -25,6 +25,7 @@ import type {
   TransformerMetadata,
 } from './types'
 import { spliceChangesIntoString, visit } from './utils.js'
+import { wrapClasses } from './wrap.ts'
 
 let base = await loadPlugins()
 
@@ -751,6 +752,17 @@ function transformCss(ast: any, { env }: TransformerContext) {
           end: !isImportant,
         },
       })
+
+      const longLine =
+        node.source.start.column + node.params.length + '@apply '.length >
+        env.options.printWidth
+
+      if (longLine && env.options.tailwindApplyWrap !== 'none') {
+        node.params = wrapClasses(node.params, {
+          env,
+          before: node.raws.before.slice(+node.raws.before.startsWith('\n')),
+        })
+      }
     }
   })
 }
@@ -1227,9 +1239,15 @@ export interface PluginOptions {
    * Preserve duplicate classes inside a class list when sorting.
    */
   tailwindPreserveDuplicates?: boolean
+
+  /**
+   * Wrap apply at-rule class lists longer than the print width.
+   */
+  tailwindApplyWrap?: 'none' | 'fill' | 'each'
 }
 
 declare module 'prettier' {
   interface RequiredOptions extends PluginOptions {}
+
   interface ParserOptions extends PluginOptions {}
 }
