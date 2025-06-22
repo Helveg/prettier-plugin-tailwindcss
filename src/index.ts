@@ -455,6 +455,7 @@ function sortStringLiteral(
   node: any,
   {
     env,
+    removeDuplicates,
     collapseWhitespace = { start: true, end: true },
   }: {
     env: TransformerEnv
@@ -464,6 +465,7 @@ function sortStringLiteral(
 ) {
   let result = sortClasses(node.value, {
     env,
+    removeDuplicates,
     collapseWhitespace,
   })
   let didChange = result !== node.value
@@ -514,6 +516,7 @@ function sortTemplateLiteral(
   node: any,
   {
     env,
+    removeDuplicates,
     collapseWhitespace = { start: true, end: true },
   }: {
     env: TransformerEnv
@@ -531,6 +534,7 @@ function sortTemplateLiteral(
 
     quasi.value.raw = sortClasses(quasi.value.raw, {
       env,
+      removeDuplicates,
       // Is not the first "item" and does not start with a space
       ignoreFirst: i > 0 && !/^\s/.test(quasi.value.raw),
 
@@ -554,6 +558,7 @@ function sortTemplateLiteral(
           ignoreFirst: i > 0 && !/^\s/.test(quasi.value.cooked),
           ignoreLast:
             i < node.expressions.length && !/\s$/.test(quasi.value.cooked),
+          removeDuplicates,
           collapseWhitespace: collapseWhitespace && {
             start: collapseWhitespace && collapseWhitespace.start && i === 0,
             end:
@@ -960,7 +965,7 @@ function transformSvelte(ast: any, { env, changes }: TransformerContext) {
           env,
           ignoreFirst: i > 0 && !/^\s/.test(value.raw),
           ignoreLast: i < attr.value.length - 1 && !/\s$/.test(value.raw),
-          removeDuplicates: false,
+          removeDuplicates: true,
           collapseWhitespace: false,
         })
         value.data = same
@@ -969,7 +974,7 @@ function transformSvelte(ast: any, { env, changes }: TransformerContext) {
               env,
               ignoreFirst: i > 0 && !/^\s/.test(value.data),
               ignoreLast: i < attr.value.length - 1 && !/\s$/.test(value.data),
-              removeDuplicates: false,
+              removeDuplicates: true,
               collapseWhitespace: false,
             })
       } else if (value.type === 'MustacheTag') {

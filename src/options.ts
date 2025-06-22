@@ -75,6 +75,13 @@ export const options: Record<string, SupportOption> = {
     description:
       'Wrap class lists to new lines when they are longer than the print width',
   },
+
+  tailwindPackageName: {
+    type: 'string',
+    default: 'tailwindcss',
+    category: 'Tailwind CSS',
+    description: 'The package name to use when loading Tailwind CSS',
+  },
 }
 
 export function getCustomizations(

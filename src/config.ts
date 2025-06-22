@@ -4,6 +4,7 @@ import * as path from 'path'
 import { pathToFileURL } from 'url'
 import clearModule from 'clear-module'
 import escalade from 'escalade/sync'
+import { createJiti, type Jiti } from 'jiti'
 import postcss from 'postcss'
 // @ts-ignore
 import postcssImport from 'postcss-import'
@@ -28,12 +29,16 @@ let prettierConfigCache = expiringMap<string, string | null>(10_000)
 export async function getTailwindConfig(
   options: ParserOptions,
 ): Promise<ContextContainer> {
+  let pkgName = options.tailwindPackageName ?? 'tailwindcss'
+
   let key = [
     options.filepath,
     options.tailwindStylesheet ?? '',
     options.tailwindEntryPoint ?? '',
     options.tailwindConfig ?? '',
+    pkgName,
   ].join(':')
+
   let baseDir = await getBaseDir(options)
 
   // Map the source file to it's associated Tailwind config file
@@ -50,14 +55,19 @@ export async function getTailwindConfig(
   }
 
   // Now see if we've loaded the Tailwind config file before (and it's still valid)
-  let contextKey = `${configPath}:${entryPoint}`
+  let contextKey = `${pkgName}:${configPath}:${entryPoint}`
   let existing = pathToContextMap.get(contextKey)
   if (existing) {
     return existing
   }
 
   // By this point we know we need to load the Tailwind config file
-  let result = await loadTailwindConfig(baseDir, configPath, entryPoint)
+  let result = await loadTailwindConfig(
+    baseDir,
+    pkgName,
+    configPath,
+    entryPoint,
+  )
 
   pathToContextMap.set(contextKey, result)
 
@@ -99,6 +109,7 @@ async function getBaseDir(options: ParserOptions): Promise<string> {
 
 async function loadTailwindConfig(
   baseDir: string,
+  pkgName: string,
   tailwindConfigPath: string | null,
   entryPoint: string | null,
 ): Promise<ContextContainer> {
@@ -109,11 +120,11 @@ async function loadTailwindConfig(
   let tailwindConfig: RequiredConfig = { content: [] }
 
   try {
-    let pkgFile = resolveJsFrom(baseDir, 'tailwindcss/package.json')
+    let pkgFile = resolveJsFrom(baseDir, `${pkgName}/package.json`)
     let pkgDir = path.dirname(pkgFile)
 
     try {
-      let v4 = await loadV4(baseDir, pkgDir, entryPoint)
+      let v4 = await loadV4(baseDir, pkgDir, pkgName, entryPoint)
       if (v4) {
         return v4
       }
@@ -156,10 +167,12 @@ async function loadTailwindConfig(
  */
 function createLoader<T>({
   legacy,
+  jiti,
   filepath,
   onError,
 }: {
   legacy: boolean
+  jiti: Jiti
   filepath: string
   onError: (id: string, error: unknown, resourceType: string) => T
 }) {
@@ -172,7 +185,7 @@ function createLoader<T>({
       let url = pathToFileURL(resolved)
       url.searchParams.append('t', cacheKey)
 
-      return await import(url.href).then((m) => m.default ?? m)
+      return await jiti.import(url.href, { default: true })
     } catch (err) {
       return onError(id, err, resourceType)
     }
@@ -194,10 +207,11 @@ function createLoader<T>({
 async function loadV4(
   baseDir: string,
   pkgDir: string,
+  pkgName: string,
   entryPoint: string | null,
 ) {
   // Import Tailwind — if this is v4 it'll have APIs we can use directly
-  let pkgPath = resolveJsFrom(baseDir, 'tailwindcss')
+  let pkgPath = resolveJsFrom(baseDir, pkgName)
 
   let tw = await import(pathToFileURL(pkgPath).toString())
 
@@ -208,6 +222,12 @@ async function loadV4(
 
   // If the user doesn't define an entrypoint then we use the default theme
   entryPoint = entryPoint ?? `${pkgDir}/theme.css`
+
+  // Create a Jiti instance that can be used to load plugins and config files
+  let jiti = createJiti(import.meta.url, {
+    moduleCache: false,
+    fsCache: false,
+  })
 
   let importBasePath = path.dirname(entryPoint)
 
@@ -242,6 +262,7 @@ async function loadV4(
     // v4.0.0-alpha.25+
     loadModule: createLoader({
       legacy: false,
+      jiti,
       filepath: entryPoint,
       onError: (id, err, resourceType) => {
         console.error(`Unable to load ${resourceType}: ${id}`, err)
@@ -266,6 +287,7 @@ async function loadV4(
     // v4.0.0-alpha.24 and below
     loadPlugin: createLoader({
       legacy: true,
+      jiti,
       filepath: entryPoint,
       onError(id, err) {
         console.error(`Unable to load plugin: ${id}`, err)
@@ -276,6 +298,7 @@ async function loadV4(
 
     loadConfig: createLoader({
       legacy: true,
+      jiti,
       filepath: entryPoint,
       onError(id, err) {
         console.error(`Unable to load config: ${id}`, err)
