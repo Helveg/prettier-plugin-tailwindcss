@@ -4,10 +4,10 @@ A [Prettier v3+](https://prettier.io/) plugin for Tailwind CSS v3.0+ that automa
 
 ## Installation
 
-To get started, install `prettier-plugin-tailwindcss` as a dev-dependency:
+To get started, install `@helveg/prettier-plugin-tailwindcss` as a dev-dependency:
 
 ```sh
-npm install -D prettier prettier-plugin-tailwindcss
+npm install -D prettier @helveg/prettier-plugin-tailwindcss
 ```
 
 Then add the plugin to your [Prettier configuration](https://prettier.io/docs/en/configuration.html):
@@ -15,7 +15,7 @@ Then add the plugin to your [Prettier configuration](https://prettier.io/docs/en
 ```json5
 // .prettierrc
 {
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "plugins": ["@helveg/prettier-plugin-tailwindcss"]
 }
 ```
 
@@ -54,6 +54,18 @@ Note that paths are resolved relative to the Prettier configuration file.
 ```
 
 If a local configuration file cannot be found the plugin will fallback to the default Tailwind configuration.
+
+## Wrapping long class lines
+
+If you want long @apply rules to be wrapped set the `tailwindApplyWrap` to either `fill` or `each` to create blocks of
+class names that respect the line width, or a vertical list of class names, respectively.
+
+```json5
+// .prettierrc
+{
+  "tailwindApplyWrap": "fill"
+}
+```
 
 ## Sorting non-standard attributes
 
