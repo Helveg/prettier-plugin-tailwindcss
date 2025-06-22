@@ -757,10 +757,12 @@ function transformCss(ast: any, { env }: TransformerContext) {
         node.source.start.column + node.params.length + '@apply '.length >
         env.options.printWidth
 
+      const beforeLines = node.raws.before.split('\n');
+
       if (longLine && env.options.tailwindApplyWrap !== 'none') {
         node.params = wrapClasses(node.params, {
           env,
-          before: node.raws.before.slice(+node.raws.before.startsWith('\n')),
+          before: beforeLines[beforeLines.length - 1],
         })
       }
     }
